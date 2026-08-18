@@ -27,6 +27,8 @@
 #include <lib.h>
 #include <str.h>
 #include <imap-common.h>
+#include <mail-storage.h>
+#include <mail-namespace.h>
 #include <http-client-private.h>
 
 #include "xaps-imap-plugin.h"
@@ -107,13 +109,11 @@ static bool parse_xapplepush(struct client_command_context *cmd, struct xaps_att
     }
 
     /*
-     * Check if this is a version we expect
+     * We intentionally do not verify the aps-version reported by the
+     * client. Some clients announce newer versions (e.g. "3"), but this
+     * extension always operates as version 2 and reports "2" back in the
+     * registration response.
      */
-
-    if (!xaps_attr->aps_version || strcmp(xaps_attr->aps_version, "2") != 0) {
-        client_send_command_error(cmd, "Unknown aps-version.");
-        return FALSE;
-    }
 
     /*
      * Check if all of the parameters are there.
@@ -205,6 +205,31 @@ int xaps_register(struct client_command_context *cmd, struct xaps_attr *xaps_att
 }
 
 /*
+ * Check whether the given mailbox actually exists for this user. Only
+ * existing mailboxes are echoed back in the registration response.
+ */
+static bool mailbox_is_valid(struct mail_user *user, const char *mailbox) {
+    struct mail_namespace *ns;
+    struct mailbox *box;
+    enum mailbox_existence existence = MAILBOX_EXISTENCE_NONE;
+    bool valid = FALSE;
+
+    ns = mail_namespace_find(user->namespaces, mailbox);
+    if (ns == NULL) {
+        return FALSE;
+    }
+
+    box = mailbox_alloc(ns->list, mailbox, 0);
+    if (mailbox_exists(box, TRUE, &existence) == 0 &&
+        existence != MAILBOX_EXISTENCE_NONE) {
+        valid = TRUE;
+    }
+    mailbox_free(&box);
+
+    return valid;
+}
+
+/*
  * Register the client at the xapsd
  */
 static bool register_client(struct client_command_context *cmd, struct xaps_attr *xaps_attr) {
@@ -224,11 +249,31 @@ static bool register_client(struct client_command_context *cmd, struct xaps_attr
     http_client_wait(xaps_global->http_client);
 
     /*
-     * Return success. We assume that aps_version and aps_topic do not
-     * contain anything that needs to be escaped.
+     * Echo back the mailboxes that were requested and are actually valid
+     * (existing) mailboxes for this user, one untagged response per
+     * mailbox. Invalid mailboxes are silently skipped.
+     */
+    if (xaps_attr->mailboxes != NULL) {
+        for (int i = 0; !IMAP_ARG_IS_EOL(&xaps_attr->mailboxes[i]); i++) {
+            const char *mailbox;
+            if (!imap_arg_get_astring(&xaps_attr->mailboxes[i], &mailbox)) {
+                continue;
+            }
+            if (!mailbox_is_valid(cmd->client->user, mailbox)) {
+                continue;
+            }
+            client_send_line(cmd->client,
+                             t_strdup_printf("* XAPPLEPUSHSERVICE \"mailbox\" \"%s\"", mailbox));
+        }
+    }
+
+    /*
+     * Return success. The aps-version is always reported as "2",
+     * regardless of the version announced by the client. We assume that
+     * aps_topic does not contain anything that needs to be escaped.
      */
     client_send_line(cmd->client,
-                     t_strdup_printf("* XAPPLEPUSHSERVICE aps-version %s aps-topic %s", xaps_attr->aps_version,
+                     t_strdup_printf("* XAPPLEPUSHSERVICE \"aps-version\" \"2\" \"aps-topic\" \"%s\"",
                                      xaps_global->aps_topic));
     client_send_tagline(cmd, "OK XAPPLEPUSHSERVICE completed.");
     return TRUE;
