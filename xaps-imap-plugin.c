@@ -253,6 +253,7 @@ static bool register_client(struct client_command_context *cmd, struct xaps_attr
      * (existing) mailboxes for this user, one untagged response per
      * mailbox. Invalid mailboxes are silently skipped.
      */
+    unsigned int registered_mailboxes = 0;
     if (xaps_attr->mailboxes != NULL) {
         for (int i = 0; !IMAP_ARG_IS_EOL(&xaps_attr->mailboxes[i]); i++) {
             const char *mailbox;
@@ -264,6 +265,7 @@ static bool register_client(struct client_command_context *cmd, struct xaps_attr
             }
             client_send_line(cmd->client,
                              t_strdup_printf("* XAPPLEPUSHSERVICE \"mailbox\" \"%s\"", mailbox));
+            registered_mailboxes++;
         }
     }
 
@@ -276,6 +278,9 @@ static bool register_client(struct client_command_context *cmd, struct xaps_attr
                      t_strdup_printf("* XAPPLEPUSHSERVICE \"aps-version\" \"2\" \"aps-topic\" \"%s\"",
                                      xaps_global->aps_topic));
     client_send_tagline(cmd, "OK XAPPLEPUSHSERVICE completed.");
+
+    i_debug("Successfully registered %u mailbox with topic %s",
+            registered_mailboxes, xaps_global->aps_topic);
     return TRUE;
 }
 
