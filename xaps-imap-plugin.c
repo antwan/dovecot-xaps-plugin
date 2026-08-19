@@ -273,7 +273,7 @@ static bool register_client(struct client_command_context *cmd, struct xaps_attr
              * "%s" would produce malformed IMAP for such names.
              */
             string_t *line = t_str_new(64);
-            str_append(line, "* XAPPLEPUSHSERVICE \"mailbox\" ");
+            str_append(line, "* XAPPLEPUSHSERVICE mailbox ");
             imap_append_string(line, mailbox);
             client_send_line(cmd->client, str_c(line));
             registered_mailboxes++;
@@ -285,8 +285,8 @@ static bool register_client(struct client_command_context *cmd, struct xaps_attr
      * contain anything that needs to be escaped.
      */
     client_send_line(cmd->client,
-                     t_strdup_printf("* XAPPLEPUSHSERVICE \"aps-version\" \"%s\" \"aps-topic\" \"%s\"",
-                                     xaps_attr->aps_version, xaps_global->aps_topic));
+                     t_strdup_printf("* XAPPLEPUSHSERVICE aps-version \"%s\" aps-topic \"%s\"", xaps_attr->aps_version,
+                                     xaps_global->aps_topic));
     client_send_tagline(cmd, "OK XAPPLEPUSHSERVICE completed.");
 
     i_debug("Successfully registered %u mailboxe(s) using topic %s",
