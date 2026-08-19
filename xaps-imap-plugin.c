@@ -110,11 +110,13 @@ static bool parse_xapplepush(struct client_command_context *cmd, struct xaps_att
     }
 
     /*
-     * We intentionally do not verify the aps-version reported by the
-     * client. Some clients announce newer versions (e.g. "3"), but this
-     * extension always operates as version 2 and reports "2" back in the
-     * registration response.
+     * Check if this is a version we expect
      */
+
+    if (!xaps_attr->aps_version || strcmp(xaps_attr->aps_version, "2") != 0) {
+        client_send_command_error(cmd, "Unknown aps-version.");
+        return FALSE;
+    }
 
     /*
      * Check if all of the parameters are there.
