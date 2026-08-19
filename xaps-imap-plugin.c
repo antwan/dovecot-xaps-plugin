@@ -254,7 +254,10 @@ static bool register_client(struct client_command_context *cmd, struct xaps_attr
     /*
      * Echo back the mailboxes that were requested and are actually valid
      * (existing) mailboxes for this user, one untagged response per
-     * mailbox. Invalid mailboxes are silently skipped.
+     * mailbox.
+     * This is required by the iOS client to build an index of watched
+     * mailboxes and display push alerts when a mailbox hash is specified
+     * in the APS payload.
      */
     unsigned int registered_mailboxes = 0;
     if (xaps_attr->mailboxes != NULL) {
@@ -266,12 +269,7 @@ static bool register_client(struct client_command_context *cmd, struct xaps_attr
             if (!mailbox_is_valid(cmd->client->user, mailbox)) {
                 continue;
             }
-            /*
-             * Use imap_append_string() so that mailbox names are properly
-             * quoted/escaped (or sent as a literal), e.g. names containing
-             * a double quote or backslash. Building the line by hand with
-             * "%s" would produce malformed IMAP for such names.
-             */
+
             string_t *line = t_str_new(64);
             str_append(line, "* XAPPLEPUSHSERVICE mailbox ");
             imap_append_string(line, mailbox);
