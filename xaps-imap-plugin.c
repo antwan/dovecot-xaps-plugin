@@ -27,6 +27,7 @@
 #include <lib.h>
 #include <str.h>
 #include <imap-common.h>
+#include <imap-quote.h>
 #include <mail-storage.h>
 #include <mail-namespace.h>
 #include <http-client-private.h>
@@ -263,8 +264,16 @@ static bool register_client(struct client_command_context *cmd, struct xaps_attr
             if (!mailbox_is_valid(cmd->client->user, mailbox)) {
                 continue;
             }
-            client_send_line(cmd->client,
-                             t_strdup_printf("* XAPPLEPUSHSERVICE \"mailbox\" \"%s\"", mailbox));
+            /*
+             * Use imap_append_string() so that mailbox names are properly
+             * quoted/escaped (or sent as a literal), e.g. names containing
+             * a double quote or backslash. Building the line by hand with
+             * "%s" would produce malformed IMAP for such names.
+             */
+            string_t *line = t_str_new(64);
+            str_append(line, "* XAPPLEPUSHSERVICE \"mailbox\" ");
+            imap_append_string(line, mailbox);
+            client_send_line(cmd->client, str_c(line));
             registered_mailboxes++;
         }
     }
