@@ -279,7 +279,7 @@ static bool register_client(struct client_command_context *cmd, struct xaps_attr
                                      xaps_global->aps_topic));
     client_send_tagline(cmd, "OK XAPPLEPUSHSERVICE completed.");
 
-    i_debug("Successfully registered %u mailbox with topic %s",
+    i_debug("Successfully registered %u mailboxe(s) using topic %s",
             registered_mailboxes, xaps_global->aps_topic);
     return TRUE;
 }
