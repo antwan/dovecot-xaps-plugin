@@ -281,13 +281,12 @@ static bool register_client(struct client_command_context *cmd, struct xaps_attr
     }
 
     /*
-     * Return success. The aps-version is always reported as "2",
-     * regardless of the version announced by the client. We assume that
-     * aps_topic does not contain anything that needs to be escaped.
+     * Return success. We assume that aps_version and aps_topic do not
+     * contain anything that needs to be escaped.
      */
     client_send_line(cmd->client,
-                     t_strdup_printf("* XAPPLEPUSHSERVICE \"aps-version\" \"2\" \"aps-topic\" \"%s\"",
-                                     xaps_global->aps_topic));
+                     t_strdup_printf("* XAPPLEPUSHSERVICE \"aps-version\" \"%s\" \"aps-topic\" \"%s\"",
+                                     xaps_attr->aps_version, xaps_global->aps_topic));
     client_send_tagline(cmd, "OK XAPPLEPUSHSERVICE completed.");
 
     i_debug("Successfully registered %u mailboxe(s) using topic %s",
